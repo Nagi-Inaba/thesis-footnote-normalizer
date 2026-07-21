@@ -5,6 +5,7 @@ output/
 audit-*/
 *.tmp
 *.bak
+.code-review-graph/
 
 # Manuscripts and likely source documents are denied everywhere by default.
 *.doc

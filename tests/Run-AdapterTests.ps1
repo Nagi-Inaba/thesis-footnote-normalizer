@@ -53,7 +53,21 @@ $readmeText = Get-Content -LiteralPath (Join-Path $repoRoot 'README.md') -Raw -E
 Assert-True -Condition ($workflowText -like '*runs-on: windows-2025*') -Message 'workflow uses the fixed Windows 2025 runner'
 Assert-True -Condition ($readmeText.Contains('windows-2025')) -Message 'README names the fixed Windows 2025 runner'
 
-$publicFiles = @(Get-ChildItem -LiteralPath $repoRoot -Recurse -File)
+$trackedPaths = @(& git -C $repoRoot ls-files 2>$null)
+if ($LASTEXITCODE -eq 0 -and $trackedPaths.Count -gt 0) {
+    $publicFiles = @($trackedPaths | ForEach-Object { Get-Item -LiteralPath (Join-Path $repoRoot $_) })
+}
+else {
+    $excludedPrefixes = @('.git', '.code-review-graph') | ForEach-Object {
+        (Join-Path $repoRoot $_).TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    }
+    $publicFiles = @(Get-ChildItem -LiteralPath $repoRoot -Recurse -File | Where-Object {
+        $candidate = $_.FullName
+        -not @($excludedPrefixes | Where-Object {
+            $candidate.StartsWith($_, [System.StringComparison]::OrdinalIgnoreCase)
+        }).Count
+    })
+}
 $forbiddenPatterns = @(
     ('C:' + '\Users\' + 'Na' + 'gi'),
     ('One' + 'Drive'),
