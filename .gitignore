@@ -1,0 +1,28 @@
+# User manuscripts and generated audit runs must never be committed.
+input/
+work/
+output/
+audit-*/
+*.tmp
+*.bak
+
+# Manuscripts and likely source documents are denied everywhere by default.
+*.doc
+*.docx
+*.docm
+*.pdf
+
+# Common live project inputs and generated audit artifacts.
+bibliography.csv
+citation-policy.json
+footnotes.csv
+citations.csv
+issues.csv
+summary.json
+report.md
+
+# Local editor and OS files.
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

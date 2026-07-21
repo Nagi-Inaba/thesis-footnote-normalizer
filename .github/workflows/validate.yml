@@ -1,0 +1,34 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Reject tracked manuscripts and live audit artifacts
+        shell: pwsh
+        run: |
+          $tracked = @(git ls-files)
+          $deniedExtensions = @('.doc', '.docx', '.docm', '.pdf')
+          $deniedNames = @('bibliography.csv', 'citation-policy.json', 'footnotes.csv', 'citations.csv', 'issues.csv', 'summary.json', 'report.md')
+          $violations = @($tracked | Where-Object {
+            $extension = [IO.Path]::GetExtension($_).ToLowerInvariant()
+            $name = [IO.Path]::GetFileName($_).ToLowerInvariant()
+            $deniedExtensions -contains $extension -or $deniedNames -contains $name
+          })
+          if ($violations.Count -gt 0) {
+            throw "Tracked sensitive or generated files:`n$($violations -join "`n")"
+          }
+      - name: Run repository tests
+        shell: pwsh
+        run: ./scripts/Test-Repository.ps1

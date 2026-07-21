@@ -1,0 +1,4 @@
+source_id,source_type,language,author,short_title,aliases,bibliography_entry
+SRC-A,book,ja,青木澄人,静かな塔,青木澄人|静かな塔,"青木澄人『静かな塔』架空書房、2020年。"
+SRC-B,translated_book,ja,Clara North,青い庭,Clara North|クララ・ノース|青い庭,"Clara North著、森野光訳『青い庭』例示出版、2021年。"
+SRC-UNUSED,article,en,Mira Vale,Paper Bridges,Mira Vale|Paper Bridges,"Mira Vale, “Paper Bridges,” Imaginary Review 4, no. 2 (2019): 1–12."

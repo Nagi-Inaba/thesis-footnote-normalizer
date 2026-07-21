@@ -1,0 +1,18 @@
+{
+  "policy_name": "Example thesis note policy",
+  "policy_version": "0.1-draft",
+  "authority_order": [
+    "graduate_school_guide",
+    "supervisor_written_decisions",
+    "selected_base_style",
+    "project_exceptions"
+  ],
+  "subsequent_citation": "author-short-title-page",
+  "consecutive_same_source": "short-form",
+  "new_sources": "prohibited_without_separate_authorization",
+  "japanese_note_terminal_mark": "。",
+  "foreign_note_terminal_mark": ".",
+  "translated_book_policy": "record_original_and_translation_as_one_citation_identity_when_the_cited_item_is_the_translation",
+  "unused_bibliography_entry": "review_only",
+  "notes": "Replace this example with rules approved for the thesis before relying on the audit."
+}

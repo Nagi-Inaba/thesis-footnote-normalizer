@@ -1,0 +1,4 @@
+interface:
+  display_name: "Thesis Footnote Normalizer"
+  short_description: "Audit Word footnotes without modifying the manuscript"
+  default_prompt: "Use $normalize-thesis-footnotes to audit a copied thesis DOCX and produce a review ledger without modifying the original."
