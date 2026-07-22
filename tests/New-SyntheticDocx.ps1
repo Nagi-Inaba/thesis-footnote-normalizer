@@ -1,7 +1,17 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)]
     [string]$OutputPath,
+
+    [switch]$IncludeBibliographySection,
+
+    [switch]$OmitBibliographyMarker,
+
+    [ValidateSet('', 'document', 'footnotes')]
+    [string]$DuplicatePart = '',
+
+    [ValidateRange(0, 5000)]
+    [int]$ExtraEntryCount = 0,
 
     [switch]$Force
 )
@@ -87,19 +97,35 @@ $documentRelationships = @'
 </Relationships>
 '@
 
-$documentXml = @'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+$documentParagraphs = @(
+    '    <w:p><w:r><w:t>Alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Adjacent alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Beta statement</w:t></w:r><w:r><w:footnoteReference w:id="3"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Separator statement</w:t></w:r><w:r><w:footnoteReference w:id="4"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Referenced source first-use shorthand</w:t></w:r><w:r><w:footnoteReference w:id="5"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Prior shorthand</w:t></w:r><w:r><w:footnoteReference w:id="6"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Formula-like unmatched footnote</w:t></w:r><w:r><w:footnoteReference w:id="7"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Later alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="8"/></w:r></w:p>',
+    '    <w:p><w:r><w:t>Explicit repeat shorthand</w:t></w:r><w:r><w:footnoteReference w:id="9"/></w:r></w:p>'
+)
+
+if ($IncludeBibliographySection) {
+    if (-not $OmitBibliographyMarker) {
+        $documentParagraphs += '    <w:p><w:r><w:t>References</w:t></w:r></w:p>'
+    }
+    $documentParagraphs += '    <w:p><w:r><w:t>Aster Vale. Clockwork Orchards.</w:t></w:r></w:p>'
+    $documentParagraphs += '    <w:p><w:r><w:t>Unknown Author. Unregistered Constellations.</w:t></w:r></w:p>'
+}
+
+$documentParagraphs += '    <w:sectPr/>'
+$documentXml = @"
+<?xml version=`"1.0`" encoding=`"UTF-8`" standalone=`"yes`"?>
+<w:document xmlns:w=`"http://schemas.openxmlformats.org/wordprocessingml/2006/main`">
   <w:body>
-    <w:p><w:r><w:t>Alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r></w:p>
-    <w:p><w:r><w:t>Adjacent alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="2"/></w:r></w:p>
-    <w:p><w:r><w:t>Beta statement</w:t></w:r><w:r><w:footnoteReference w:id="3"/></w:r></w:p>
-    <w:p><w:r><w:t>Later alpha statement</w:t></w:r><w:r><w:footnoteReference w:id="4"/></w:r></w:p>
-    <w:p><w:r><w:t>Explanatory statement</w:t></w:r><w:r><w:footnoteReference w:id="5"/></w:r></w:p>
-    <w:sectPr/>
+$($documentParagraphs -join "`r`n")
   </w:body>
 </w:document>
-'@
+"@
 
 $footnotesXml = @'
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -109,8 +135,12 @@ $footnotesXml = @'
   <w:footnote w:id="1"><w:p><w:r><w:t>Aster Vale, Clockwork Orchards, p. 11.</w:t></w:r></w:p></w:footnote>
   <w:footnote w:id="2"><w:p><w:r><w:t>Aster</w:t><w:tab/><w:t>Vale, Clockwork Orchards, p. 18.</w:t></w:r></w:p></w:footnote>
   <w:footnote w:id="3"><w:p><w:r><w:t>Beryl North, Lantern Rivers, p. 7.</w:t></w:r></w:p></w:footnote>
-  <w:footnote w:id="4"><w:p><w:r><w:t>Aster Vale,</w:t><w:br/><w:t>Clockwork Orchards, p. 29.</w:t></w:r></w:p></w:footnote>
-  <w:footnote w:id="5"><w:p><w:r><w:t>=1+1 Artificial examples contain no bibliography alias.</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="4" w:type="separator"><w:p><w:r><w:t>Ignored separator</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="5"><w:p><w:r><w:t>Op. cit. for Cedar Vane, Ember Journal.</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="6"><w:p><w:r><w:t>同上</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="7"><w:p><w:r><w:t>=2+2 Flibidem Studies</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="8" w:type="normal"><w:p><w:r><w:t>Aster Vale, Clockwork Orchards, p. 29.</w:t></w:r></w:p></w:footnote>
+  <w:footnote w:id="9"><w:p><w:r><w:t>Aster Vale, op. cit., p. 35.</w:t></w:r></w:p></w:footnote>
 </w:footnotes>
 '@
 
@@ -123,6 +153,15 @@ try {
     Add-ZipTextEntry -Archive $archive -EntryName 'word/document.xml' -Content $documentXml
     Add-ZipTextEntry -Archive $archive -EntryName 'word/_rels/document.xml.rels' -Content $documentRelationships
     Add-ZipTextEntry -Archive $archive -EntryName 'word/footnotes.xml' -Content $footnotesXml
+    if ($DuplicatePart -eq 'document') {
+        Add-ZipTextEntry -Archive $archive -EntryName 'word/document.xml' -Content $documentXml
+    }
+    elseif ($DuplicatePart -eq 'footnotes') {
+        Add-ZipTextEntry -Archive $archive -EntryName 'word/footnotes.xml' -Content $footnotesXml
+    }
+    for ($extraIndex = 0; $extraIndex -lt $ExtraEntryCount; $extraIndex++) {
+        Add-ZipTextEntry -Archive $archive -EntryName ("extra/entry-{0:D4}.txt" -f $extraIndex) -Content 'x'
+    }
 }
 finally {
     if ($null -ne $archive) {

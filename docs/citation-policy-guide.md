@@ -1,42 +1,78 @@
 # Citation policy guide
 
-## Decide the authority order first
+## Authority order
 
-Use this order unless the institution states otherwise.
+Use the graduate-school rules, written supervisor decisions, one base style, and documented project exceptions in that order unless the institution says otherwise.
 
-1. Graduate-school or faculty submission rules
-2. Written decisions from the supervisor
-3. One selected base style
-4. Explicit project exceptions for specialist sources
+The audit records policy decisions; it does not choose them.
 
-Do not combine attractive fragments from several styles without recording which rule controls each case.
+## Minimal and v0.2 policies
+
+The original minimal policy remains accepted for backward compatibility:
+
+```json
+{
+  "policy_name": "Thesis citation policy",
+  "subsequent_citation": "author-short-title-page",
+  "consecutive_same_source": "short-form",
+  "new_sources": "prohibited_without_separate_authorization"
+}
+```
+
+This compatibility form does not describe the fields required for every source type.
+Configure `source_type_policies` before treating a full audit as policy-complete.
+
+Each source-type rule declares the structured registry fields required for that type, separated by first and later use where the approved style differs.
+Use field names from the bibliography registry, not prose descriptions of a desired citation.
+
+```json
+{
+  "policy_name": "Thesis citation policy",
+  "subsequent_citation": "author-short-title-page",
+  "consecutive_same_source": "short-form",
+  "new_sources": "prohibited_without_separate_authorization",
+  "source_type_policies": {
+    "book": {
+      "first_use_required_fields": ["author", "title", "publisher", "year"],
+      "subsequent_use_required_fields": ["author", "short_title"],
+      "consecutive_same_source": "ibid"
+    }
+  }
+}
+```
+
+Field names and source types must match the implemented example policy and registry headers.
+Do not infer missing publication data from a footnote.
 
 ## Decisions required before a full audit
 
-- What information appears in the first citation for each source type?
-- What information appears in later citations?
-- Is `ibid.` or `同上` allowed?
-- How are page ranges written?
-- Which terminal punctuation is used for Japanese and foreign-language notes?
-- How are translated books represented?
-- Which specialist sources are exempt from the general book/article templates?
-- Must every cited source appear in the bibliography?
-- May background sources appear in the bibliography without a footnote citation?
+- Required fields for the first and later citation of every `source_type`
+- Whether `ibid.`, `op. cit.`, 「同上」, or 「前掲」 is permitted
+- Page-range and terminal-punctuation rules
+- Translated-work rules
+- Specialist-source exceptions
+- Whether every cited source must occur in the bibliography
+- Whether uncited background sources may remain in the bibliography
 
-## Recommended default for later citations
+## Contextual shorthand
 
-When no controlling rule requires `ibid.` or `同上`, use author, short title, and page number.
+`ibid.`, `op. cit.`, 「同上」, and 「前掲」 depend on context.
+The audit always marks their candidates `review_required`; their presence never proves a bibliographic identity or a correct rewrite.
 
-This form remains understandable after a note is inserted or moved. An immediately repeated source may still be reported as an `ibid_candidate`, but the report is not an instruction to use `ibid.`.
+When no controlling rule requires contextual shorthand, prefer an explicit short form such as author, short title, and page.
+The audit warns when a short form appears on the first matched use because first-use completeness still needs human review.
 
-## Translated books
+## Bibliography sources
 
-Give the cited translation one stable `source_id`.
+`bibliography.csv` remains the identity registry.
+Generated `citation-variants.csv` records normalized citation variants and comparison evidence without turning a variant into proof of identity.
 
-Store original-author, translator, translated title, publisher, translation year, original title, and original year in the project bibliography system when the approved style requires them. Do not infer missing original-publication data from the footnote alone.
+An optional bibliography DOCX can be supplied with `-BibliographyDocx`.
+The audit extracts text only from markers identified by the policy's `bibliography_document` section and writes `bibliography-reconciliation.csv` for review.
+Extraction does not silently replace registry data.
 
-## Specialist theological and canon-law sources
+The `bibliography_document` object uses `enabled`, `start_marker`, `end_marker`, `include_heading`, and `paragraph_match_mode`.
+When it is enabled without `-BibliographyDocx`, the manuscript copy itself is inspected; supplying the parameter while the policy block is absent or disabled is an error.
 
-Scripture, church documents, canon-law materials, historical editions, and archival sources may use identifiers that do not fit a general book template.
-
-Create a documented source-type exception instead of forcing those items into the book rule. The v1 audit can identify a registered alias and occurrence order, but it cannot decide the authoritative specialist form.
+Translated books, archival materials, scripture, church documents, canon-law materials, and historical editions often need distinct `source_type_policies`.
+Create explicit rules instead of forcing them into a general book rule.

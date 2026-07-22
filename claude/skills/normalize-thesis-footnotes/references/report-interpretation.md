@@ -1,10 +1,14 @@
 # Report interpretation
 
-- `first`: first matched source occurrence.
-- `repeat`: later non-immediate occurrence.
-- `ibid_candidate`: adjacent footnotes each match the same single source.
-- `unmatched`: no alias match; it may be explanatory text.
-- `multiple_match`: several sources matched; it may be a valid multi-source note.
-- `unused_bibliography`: not matched in notes; review without automatic deletion.
+- `citation_classification`: `first` or `repeat` for a confirmed registered source.
+- `adjacent_same_source`: sequence evidence only.
+- `ibid_rewrite_candidate`: policy-aware review flag, never a rewrite instruction.
+- `ibid.`, `op. cit.`, 「同上」, and 「前掲」: always `review_required` and never proof of identity.
+- First-use short form: warning to check policy-required first-use fields.
+- `bibliography-reconciliation.csv`: review comparison against marked bibliography-DOCX text.
+- Special `w:type` footnotes: excluded from citation analysis.
 
-These are screening labels, not substantive citation validation.
+Schema v2 adds issue types for shorthand, first-use short forms, policy or field gaps, reconciliation, and special-footnote exclusions alongside matching issues.
+Use the README and emitted headers for exact installed-version names.
+
+All results are screening evidence, not bibliographic proof.

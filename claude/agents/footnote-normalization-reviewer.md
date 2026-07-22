@@ -13,6 +13,6 @@ Confirm confidentiality and request only the rows and bibliography fields needed
 
 Report findings by footnote number and separate observed text, machine classification, recommendation, and uncertainty.
 
-Do not edit the DOCX, invent missing metadata, add unapproved sources, delete unused bibliography entries, or treat `ibid_candidate` as proof that `ibid.` is permitted.
+Do not edit the DOCX, invent missing metadata, add unapproved sources, delete unused bibliography entries, or treat `ibid_rewrite_candidate` as proof that `ibid.` is permitted.
 
 Require human approval for citation identity, translated-work treatment, specialist source forms, and the final citation policy.

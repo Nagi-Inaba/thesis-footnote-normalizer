@@ -1,21 +1,10 @@
 # Workflow gates
 
-## Gate 1: body stability
+1. **Stable order:** label `first` and `repeat` provisional while notes may move.
+2. **Policy authority:** the minimal policy remains compatible, but users should configure `source_type_policies` and required structured fields.
+3. **Identity:** require stable `source_id` values; variants and contextual shorthand do not prove identity.
+4. **Optional bibliography:** use `-BibliographyDocx` only with explicit `bibliography_document` markers, then review `bibliography-reconciliation.csv`.
+5. **Human approval:** treat all shorthand and rewrite candidates as `review_required`.
+6. **Rerun:** after tracked Word edits, audit a new copy and compare schema v2 issue counts.
 
-If paragraphs, chapters, or notes may still move, run an inventory but describe first/repeat classification as provisional.
-
-## Gate 2: policy authority
-
-Require an authority order and explicit rules for later citations, consecutive citations, translated works, terminal punctuation, and specialist sources.
-
-## Gate 3: citation identity
-
-Do not merge two bibliography records merely because author or title text looks similar. Require a stable `source_id` and record the reason for any merge.
-
-## Gate 4: human approval
-
-Machine-detected punctuation and occurrence order are evidence. The chosen citation form remains a human-approved policy decision.
-
-## Gate 5: rerun
-
-After approved Word edits, rerun the audit against the revised copy and compare issue counts. If body order changed, recompute all order-sensitive classifications.
+The audit is non-mutating throughout these gates.

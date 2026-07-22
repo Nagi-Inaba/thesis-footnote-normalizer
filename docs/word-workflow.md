@@ -2,22 +2,44 @@
 
 ## Before the audit
 
-1. Finish structural editing or record that the result is provisional.
+1. Finish structural editing or label order-dependent results provisional.
 2. Save and close the manuscript.
-3. Create a separately named copy, such as `thesis-footnote-review-01.docx`.
-4. Put the copy under a Git-ignored `input/` directory.
-5. Complete the citation policy and bibliography registry.
+3. Create a separately named DOCX copy under a Git-ignored input directory.
+4. Complete the policy and bibliography registry.
+5. If reconciling a Word bibliography, prepare a separate bibliography DOCX and configure `bibliography_document` markers.
 
-## After the audit
+## Run without mutation
 
-1. Open `issues.csv` and resolve unmatched or multiply matched notes.
-2. Review `citations.csv` in footnote order.
-3. Confirm the first and later citation form for every source type.
-4. Open the copied DOCX in Microsoft Word.
-5. Turn on Track Changes.
-6. Apply approved changes one footnote at a time.
-7. Do not accept changes until the researcher has reviewed them.
-8. Run a new audit against the revised copy.
-9. Confirm that the intended issue count decreased and that no citation identity changed unexpectedly.
+```powershell
+.\scripts\Invoke-FootnoteAudit.ps1 `
+  -InputDocx .\input\thesis-review.docx `
+  -BibliographyCsv .\input\bibliography.csv `
+  -PolicyJson .\input\citation-policy.json `
+  -OutputDirectory .\work\audit-001
+```
 
-The audit does not change Word fields, note references, styles, hyperlinks, or tracked changes because it never writes to the DOCX.
+With an optional bibliography document:
+
+```powershell
+.\scripts\Invoke-FootnoteAudit.ps1 `
+  -InputDocx .\input\thesis-review.docx `
+  -BibliographyCsv .\input\bibliography.csv `
+  -BibliographyDocx .\input\bibliography-review.docx `
+  -PolicyJson .\input\citation-policy.json `
+  -OutputDirectory .\work\audit-002
+```
+
+The audit reads OOXML and writes reports only.
+It does not change Word fields, note references, styles, hyperlinks, tracked changes, or either DOCX.
+
+## Review and edit
+
+1. Resolve `issues.csv` items before relying on classifications.
+2. Review `citation_classification`, `adjacent_same_source`, and `ibid_rewrite_candidate` separately.
+3. Review every contextual-shorthand and first-use short-form warning.
+4. If present, reconcile `bibliography-reconciliation.csv` against the structured registry.
+5. Open the copied manuscript in Word and turn on Track Changes.
+6. Apply only approved changes, one footnote at a time.
+7. Rerun the audit against a new revised copy and compare issue counts.
+
+Footnotes whose OOXML `w:type` marks them as special notes, including separators, are excluded from citation analysis without creating citation or issue rows.

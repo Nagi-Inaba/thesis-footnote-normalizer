@@ -13,6 +13,66 @@
   "japanese_note_terminal_mark": "。",
   "foreign_note_terminal_mark": ".",
   "translated_book_policy": "record_original_and_translation_as_one_citation_identity_when_the_cited_item_is_the_translation",
+  "source_type_policies": {
+    "default": {
+      "first_use_required_fields": [
+        "author",
+        "short_title",
+        "year"
+      ],
+      "subsequent_use_required_fields": [
+        "author",
+        "short_title"
+      ],
+      "consecutive_same_source": "short-form"
+    },
+    "book": {
+      "first_use_required_fields": [
+        "author",
+        "title",
+        "publisher",
+        "year"
+      ],
+      "subsequent_use_required_fields": [
+        "author",
+        "short_title"
+      ],
+      "consecutive_same_source": "short-form"
+    },
+    "article": {
+      "first_use_required_fields": [
+        "author",
+        "short_title",
+        "journal",
+        "year"
+      ],
+      "subsequent_use_required_fields": [
+        "author",
+        "short_title"
+      ],
+      "consecutive_same_source": "short-form"
+    },
+    "translated_book": {
+      "first_use_required_fields": [
+        "author",
+        "translator",
+        "title",
+        "year"
+      ],
+      "subsequent_use_required_fields": [
+        "author",
+        "short_title"
+      ],
+      "consecutive_same_source": "short-form"
+    }
+  },
+  "bibliography_document": {
+    "enabled": false,
+    "start_marker": "参考文献",
+    "end_marker": "",
+    "include_heading": false,
+    "paragraph_match_mode": "exact"
+  },
   "unused_bibliography_entry": "review_only",
   "notes": "Replace this example with rules approved for the thesis before relying on the audit."
 }
