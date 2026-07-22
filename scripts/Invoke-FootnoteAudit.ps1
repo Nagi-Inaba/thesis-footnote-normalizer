@@ -30,7 +30,7 @@ function Resolve-RequiredFile {
     )
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "$Label does not exist or is not a file: $Path"
+        throw "$Label が存在しないか、ファイルではありません：$Path"
     }
 
     return (Resolve-Path -LiteralPath $Path).Path
@@ -47,7 +47,7 @@ function Assert-NoReparsePointInPath {
         if (Test-Path -LiteralPath $current) {
             $item = Get-Item -LiteralPath $current -Force
             if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-                throw "$Label traverses a reparse point: $current"
+                throw "$Label のパスに再解析ポイントが含まれています：$current"
             }
         }
         $parent = [System.IO.Path]::GetDirectoryName($current)
@@ -69,17 +69,17 @@ function Prepare-OutputFile {
     $fullRoot = [System.IO.Path]::GetFullPath($OutputRoot).TrimEnd('\', '/')
     $expectedParent = [System.IO.Path]::GetDirectoryName($fullPath).TrimEnd('\', '/')
     if (-not [string]::Equals($expectedParent, $fullRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Refusing to prepare an output outside OutputDirectory: $fullPath"
+        throw "OutputDirectory の外には監査結果を作成できません：$fullPath"
     }
 
     Assert-NoReparsePointInPath -Path $fullPath -Label 'Audit output path'
     if (Test-Path -LiteralPath $fullPath) {
         $item = Get-Item -LiteralPath $fullPath -Force
         if ($item.PSIsContainer) {
-            throw "Audit output path is a directory, not a file: $fullPath"
+            throw "監査結果の出力先がファイルではなくディレクトリです：$fullPath"
         }
         if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-            throw "Refusing to replace a reparse-point audit output: $fullPath"
+            throw "再解析ポイントになっている監査結果は置き換えられません：$fullPath"
         }
         # Remove the directory entry before writing. This prevents writing through an existing hardlink.
         Remove-Item -LiteralPath $fullPath -Force
@@ -290,7 +290,7 @@ function Assert-SafeZipContainer {
 
     $file = Get-Item -LiteralPath $Path -Force
     if ($file.Length -gt 128MB) {
-        throw "$Label exceeds the 128 MiB compressed-file audit limit."
+        throw "$Label は圧縮ファイルの監査上限（128 MiB）を超えています。"
     }
 
     $stream = [System.IO.File]::Open($file.FullName, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
@@ -299,7 +299,7 @@ function Assert-SafeZipContainer {
         $tail = [byte[]]::new($tailLength)
         [void]$stream.Seek(-$tailLength, [System.IO.SeekOrigin]::End)
         if ($stream.Read($tail, 0, $tail.Length) -ne $tail.Length) {
-            throw "$Label ZIP end record could not be read safely."
+            throw "$Label のZIP終端レコードを安全に読み取れませんでした。"
         }
 
         $endRecordOffset = -1
@@ -322,7 +322,7 @@ function Assert-SafeZipContainer {
             }
         }
         if ($endRecordOffset -lt 0) {
-            throw "$Label is missing a supported ZIP end record."
+            throw "$Label に対応可能なZIP終端レコードがありません。"
         }
 
         $entryCount = [BitConverter]::ToUInt16($tail, $endRecordOffset + 10)
@@ -331,13 +331,13 @@ function Assert-SafeZipContainer {
         if ($entryCount -eq [UInt16]::MaxValue -or
             $centralDirectoryBytes -eq [UInt32]::MaxValue -or
             $centralDirectoryOffset -eq [UInt32]::MaxValue) {
-            throw "$Label uses ZIP64 metadata, which is not accepted by this audit tool."
+            throw "$Label は、この監査ツールが受け付けないZIP64メタデータを使用しています。"
         }
         if ($entryCount -gt 4096) {
-            throw "$Label exceeds the permitted ZIP entry count of 4096."
+            throw "$Label は許容されるZIPエントリ数（4096件）を超えています。"
         }
         if ($centralDirectoryBytes -gt 16MB) {
-            throw "$Label central directory exceeds the 16 MiB audit limit."
+            throw "$Label の中央ディレクトリは監査上限（16 MiB）を超えています。"
         }
     }
     finally {
@@ -355,13 +355,13 @@ function Open-SafeDocxArchive {
     $archive = [System.IO.Compression.ZipFile]::OpenRead($Path)
     try {
         if ($archive.Entries.Count -gt 4096) {
-            throw "$Label exceeds the permitted ZIP entry count of 4096."
+            throw "$Label は許容されるZIPエントリ数（4096件）を超えています。"
         }
         [UInt64]$aggregateLength = 0
         foreach ($archiveEntry in $archive.Entries) {
             $aggregateLength += [UInt64]$archiveEntry.Length
             if ($aggregateLength -gt 256MB) {
-                throw "$Label exceeds the 256 MiB aggregate uncompressed audit limit."
+                throw "$Label は展開後の合計監査上限（256 MiB）を超えています。"
             }
         }
         return ,$archive
@@ -383,21 +383,21 @@ function Read-ZipEntryText {
 
     $matchingEntries = @($Archive.Entries | Where-Object { $_.FullName -ceq $EntryName })
     if ($matchingEntries.Count -eq 0) {
-        throw "DOCX package is missing required part: $EntryName"
+        throw "DOCXパッケージに必須パーツがありません：$EntryName"
     }
     if ($matchingEntries.Count -gt 1) {
-        throw "DOCX package contains a duplicate required part: $EntryName"
+        throw "DOCXパッケージ内で必須パーツが重複しています：$EntryName"
     }
     $entry = $matchingEntries[0]
 
     $maximumUncompressedBytes = 64MB
     $maximumCompressionRatio = 500.0
     if ($entry.Length -gt $maximumUncompressedBytes) {
-        throw "DOCX part exceeds the 64 MiB audit limit: $EntryName"
+        throw "DOCXパーツは監査上限（64 MiB）を超えています：$EntryName"
     }
     if ($entry.CompressedLength -gt 0 -and
         ($entry.Length / [double]$entry.CompressedLength) -gt $maximumCompressionRatio) {
-        throw "DOCX part exceeds the permitted compression ratio: $EntryName"
+        throw "DOCXパーツは許容される圧縮率を超えています：$EntryName"
     }
 
     $stream = $entry.Open()
@@ -445,7 +445,7 @@ function ConvertTo-SafeXmlDocument {
         return ,$document
     }
     catch {
-        throw "$Label is not safe, valid XML: $($_.Exception.Message)"
+        throw "$Label を安全で有効なXMLとして解析できません：$($_.Exception.Message)"
     }
     finally {
         if ($null -ne $xmlReader) {
@@ -550,7 +550,7 @@ function Write-CsvFile {
 }
 
 if (-not [string]::Equals([System.IO.Path]::GetExtension($InputDocx), '.docx', [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "InputDocx must have a .docx extension: $InputDocx"
+    throw "InputDocxには.docx拡張子が必要です：$InputDocx"
 }
 
 $resolvedInput = Resolve-RequiredFile -Path $InputDocx -Label 'InputDocx'
@@ -572,7 +572,7 @@ $protectedInputs = @($resolvedInput, $resolvedBibliography, $resolvedPolicy)
 foreach ($outputPath in $outputPaths.Values) {
     foreach ($protectedInput in $protectedInputs) {
         if ([string]::Equals($outputPath, $protectedInput, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to overwrite an input file with an audit output: $outputPath"
+            throw "監査結果で入力ファイルを上書きすることはできません：$outputPath"
         }
     }
 }
@@ -580,10 +580,10 @@ foreach ($outputPath in $outputPaths.Values) {
 $outputDirectoryExists = Test-Path -LiteralPath $resolvedOutput
 if ($outputDirectoryExists) {
     if (-not (Test-Path -LiteralPath $resolvedOutput -PathType Container)) {
-        throw "OutputDirectory exists but is not a directory: $resolvedOutput"
+        throw "OutputDirectoryは存在しますが、ディレクトリではありません：$resolvedOutput"
     }
     if (-not $Force) {
-        throw "OutputDirectory already exists. Use -Force to write audit outputs into it: $resolvedOutput"
+        throw "OutputDirectoryはすでに存在します。監査結果をそこへ書き込むには-Forceを指定してください：$resolvedOutput"
     }
 }
 
@@ -593,7 +593,7 @@ try {
     $policy = Get-Content -Raw -Encoding utf8 -LiteralPath $resolvedPolicy | ConvertFrom-Json
 }
 catch {
-    throw "PolicyJson is not valid JSON: $($_.Exception.Message)"
+    throw "PolicyJsonは有効なJSONではありません：$($_.Exception.Message)"
 }
 
 $requiredPolicyFields = @(
@@ -606,7 +606,7 @@ foreach ($field in $requiredPolicyFields) {
     $property = $policy.PSObject.Properties[$field]
     if ($null -eq $property -or $null -eq $property.Value -or
         ($property.Value -is [string] -and [string]::IsNullOrWhiteSpace($property.Value))) {
-        throw "PolicyJson is missing required field or has a blank value: $field"
+        throw "PolicyJsonの必須項目がないか、値が空です：$field"
     }
 }
 
@@ -641,7 +641,7 @@ if ($bibliographyDocumentPolicyEnabled) {
     $bibliographyReconciliationEnabled = $true
 }
 elseif (-not [string]::IsNullOrWhiteSpace($BibliographyDocx)) {
-    throw 'Bibliography docx was provided but bibliography_document.enabled is false or missing in policy.'
+    throw 'BibliographyDocxが指定されていますが、方針内のbibliography_document.enabledがfalseまたは未設定です。'
 }
 
 $resolvedBibliographyDocument = if ($bibliographyReconciliationEnabled) {
@@ -650,7 +650,7 @@ $resolvedBibliographyDocument = if ($bibliographyReconciliationEnabled) {
     }
     else {
         if (-not [string]::Equals([System.IO.Path]::GetExtension($BibliographyDocx), '.docx', [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "BibliographyDocx must have a .docx extension: $BibliographyDocx"
+            throw "BibliographyDocxには.docx拡張子が必要です：$BibliographyDocx"
         }
         Resolve-RequiredFile -Path $BibliographyDocx -Label 'BibliographyDocx'
     }
@@ -660,7 +660,7 @@ $resolvedBibliographyDocument = if ($bibliographyReconciliationEnabled) {
 
 $bibliography = @(Import-Csv -LiteralPath $resolvedBibliography -Encoding utf8)
 if ($bibliography.Count -eq 0) {
-    throw 'BibliographyCsv must contain at least one data row.'
+    throw 'BibliographyCsvには1件以上のデータ行が必要です。'
 }
 
 $requiredBibliographyColumns = @(
@@ -675,17 +675,17 @@ $requiredBibliographyColumns = @(
 $availableColumns = @($bibliography[0].PSObject.Properties.Name)
 foreach ($column in $requiredBibliographyColumns) {
     if ($availableColumns -notcontains $column) {
-        throw "BibliographyCsv is missing required column: $column"
+        throw "BibliographyCsvに必須列がありません：$column"
     }
 }
 $hasSourceTypePolicies = $policy.PSObject.Properties['source_type_policies'] -ne $null
 $sourceTypePolicies = @{}
 if ($hasSourceTypePolicies) {
     if ($policy.source_type_policies -isnot [psobject]) {
-        throw 'policy.source_type_policies must be an object.'
+        throw 'policy.source_type_policiesはオブジェクトで指定してください。'
     }
     if (-not ($policy.source_type_policies.PSObject.Properties.Name -contains 'default')) {
-        throw 'policy.source_type_policies must contain a default rule.'
+        throw 'policy.source_type_policiesにはdefault規則が必要です。'
     }
     foreach ($policyEntry in $policy.source_type_policies.PSObject.Properties) {
         $sourceType = [string]$policyEntry.Name
@@ -699,10 +699,10 @@ $sourceTypePolicyMissingSources = [System.Collections.Generic.List[string]]::new
 foreach ($row in $bibliography) {
     $sourceId = ([string]$row.source_id).Trim()
     if ([string]::IsNullOrWhiteSpace($sourceId)) {
-        throw 'BibliographyCsv contains a blank source_id.'
+        throw 'BibliographyCsvに空のsource_idがあります。'
     }
     if (-not $sourceIds.Add($sourceId)) {
-        throw "BibliographyCsv contains duplicate source_id values: $sourceId"
+        throw "BibliographyCsvでsource_idが重複しています：$sourceId"
     }
     $sourceType = [string]$row.source_type
     $hasTypeRule = $sourceTypePolicies.ContainsKey($sourceType)
@@ -793,7 +793,7 @@ if ($null -ne $resolvedBibliographyDocument) {
 foreach ($outputPath in $outputPaths.Values) {
     foreach ($protectedInput in $protectedInputs) {
         if ([string]::Equals($outputPath, $protectedInput, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to overwrite an input file with an audit output: $outputPath"
+            throw "監査結果で入力ファイルを上書きすることはできません：$outputPath"
         }
     }
 }
@@ -816,7 +816,7 @@ $footnotesXml = ConvertTo-SafeXmlDocument -XmlText $footnotesText -Label 'word/f
 $documentWordNamespace = $documentXml.DocumentElement.NamespaceURI
 $footnoteWordNamespace = $footnotesXml.DocumentElement.NamespaceURI
 if ([string]::IsNullOrWhiteSpace($documentWordNamespace) -or [string]::IsNullOrWhiteSpace($footnoteWordNamespace)) {
-    throw 'DOCX word/document.xml or word/footnotes.xml has no WordprocessingML namespace.'
+    throw 'DOCXのword/document.xmlまたはword/footnotes.xmlにWordprocessingML名前空間がありません。'
 }
 $documentNamespaces = [System.Xml.XmlNamespaceManager]::new($documentXml.NameTable)
 $documentNamespaces.AddNamespace('w', $documentWordNamespace)
@@ -863,7 +863,7 @@ if ($bibliographyReconciliationEnabled) {
     $bibliographyDocumentXml = ConvertTo-SafeXmlDocument -XmlText $bibliographyDocumentText -Label 'bibliography word/document.xml'
     $bibliographyDocumentWordNamespace = $bibliographyDocumentXml.DocumentElement.NamespaceURI
     if ([string]::IsNullOrWhiteSpace($bibliographyDocumentWordNamespace)) {
-        throw 'Bibliography DOCX word/document.xml has no WordprocessingML namespace.'
+        throw '参考文献DOCXのword/document.xmlにWordprocessingML名前空間がありません。'
     }
     $bibliographyDocumentNamespaces = [System.Xml.XmlNamespaceManager]::new($bibliographyDocumentXml.NameTable)
     $bibliographyDocumentNamespaces.AddNamespace('w', $bibliographyDocumentWordNamespace)
@@ -900,7 +900,7 @@ if ($bibliographyReconciliationEnabled) {
 
     if ($startMatchIndex -lt 0) {
         $bibliographyReconciliationStatus = 'marker_not_found'
-        $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_not_found' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId '' -Message 'Bibliography start marker not found in the designated DOCX.' -Evidence "start_marker=$normalizedStartMarker; paragraph_match_mode=$matchMode"))
+        $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_not_found' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId '' -Message '指定したDOCX内に参考文献一覧の開始マーカーが見つかりませんでした。' -Evidence "start_marker=$normalizedStartMarker; paragraph_match_mode=$matchMode"))
     }
     else {
         $start = if ($bibliographyPolicyIncludeHeading) { $startMatchIndex } else { $startMatchIndex + 1 }
@@ -963,10 +963,10 @@ if ($bibliographyReconciliationEnabled) {
                 foreach ($candidateId in $matchIds) {
                     [void]$observedBibliographySourceIds.Add($candidateId)
                 }
-                $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_multiple_matches' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId ($matchIds -join '|') -Message 'One bibliography paragraph matched multiple registry sources; human disambiguation is required.' -Evidence "paragraph_number=$paragraphNumber"))
+                $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_multiple_matches' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId ($matchIds -join '|') -Message '参考文献一覧の1段落が台帳内の複数文献に一致しました。人による文献同定が必要です。' -Evidence "paragraph_number=$paragraphNumber"))
             }
             else {
-                $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_unmatched' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId '' -Message 'No bibliography source alias matched this bibliography paragraph.' -Evidence "paragraph_number=$paragraphNumber; text=$paragraphText"))
+                $issueRows.Add((New-IssueRow -IssueType 'document_bibliography_unmatched' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId '' -Message '参考文献一覧のこの段落に一致する文献別名が台帳にありません。' -Evidence "paragraph_number=$paragraphNumber; text=$paragraphText"))
             }
 
             $bibliographyReconciliationRows.Add([pscustomobject][ordered]@{
@@ -985,7 +985,7 @@ if ($bibliographyReconciliationEnabled) {
 $previousSingleMatchSourceId = ''
 $footnoteNumber = 0
 foreach ($missingSource in $sourceTypePolicyMissingSources) {
-    $issueRows.Add((New-IssueRow -IssueType 'source_type_policy_missing' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $missingSource -Message 'No source-type policy exists for this source_type; default policy was used for component evaluation.'))
+    $issueRows.Add((New-IssueRow -IssueType 'source_type_policy_missing' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $missingSource -Message 'このsource_typeに対応する方針がないため、default方針で項目を確認しました。'))
 }
 
 $japaneseTerminalMark = if ($policy.PSObject.Properties['japanese_note_terminal_mark'] -ne $null) {
@@ -1125,7 +1125,7 @@ foreach ($referenceNode in $documentXml.SelectNodes('//w:footnoteReference', $do
     $identityStatus = ''
     $comparisonStatus = 'not_evaluated_ambiguous_identity'
     if (-not $hasFootnoteBody) {
-        $issueRows.Add((New-IssueRow -IssueType 'missing_footnote_body' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message 'The document references a footnote ID that is absent from word/footnotes.xml; OOXML structure requires review.'))
+        $issueRows.Add((New-IssueRow -IssueType 'missing_footnote_body' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message '本文が参照する脚注IDに対応する脚注本文がword/footnotes.xmlにありません。OOXML構造を確認してください。'))
     }
     elseif ($matchCount -eq 0) {
         if ($hasShortFormMarker) {
@@ -1137,22 +1137,22 @@ foreach ($referenceNode in $documentXml.SelectNodes('//w:footnoteReference', $do
             if ($hasContextualShortForm -and -not [string]::IsNullOrWhiteSpace($previousSingleMatchSourceId)) {
                 $contextSourceId = $previousSingleMatchSourceId
                 $identityStatus = 'context_inferred_review_required'
-                $issueRows.Add((New-IssueRow -IssueType 'contextual_shorthand_candidate' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $contextSourceId -Message 'Short form appears to inherit source context; identity requires review.'))
+                $issueRows.Add((New-IssueRow -IssueType 'contextual_shorthand_candidate' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $contextSourceId -Message 'この短縮形は直前の文献を参照している可能性があります。文献同一性は人が確認してください。'))
             }
             elseif ($hasContextualShortForm) {
-                $issueRows.Add((New-IssueRow -IssueType 'unresolved_shorthand' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message 'No explicit source alias was matched in context-only shorthand.'))
+                $issueRows.Add((New-IssueRow -IssueType 'unresolved_shorthand' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message '文脈だけに依存する短縮形から、明示的な文献別名を特定できませんでした。'))
             }
             else {
-                $issueRows.Add((New-IssueRow -IssueType 'unresolved_shorthand' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message 'No explicit source alias was matched in shorthand citation.'))
+                $issueRows.Add((New-IssueRow -IssueType 'unresolved_shorthand' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message '短縮形の引用から、明示的な文献別名を特定できませんでした。'))
             }
         }
         else {
-            $issueRows.Add((New-IssueRow -IssueType 'unmatched_footnote' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message 'No explicit source alias was matched in this footnote.'))
+            $issueRows.Add((New-IssueRow -IssueType 'unmatched_footnote' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId '' -Message 'この脚注に一致する明示的な文献別名が台帳にありません。'))
         }
         $comparisonStatus = 'not_configured'
     }
     elseif ($matchCount -gt 1) {
-        $issueRows.Add((New-IssueRow -IssueType 'multiple_source_matches' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId ($matchIds -join '|') -Message 'Multiple bibliography sources matched this footnote; human disambiguation is required.'))
+        $issueRows.Add((New-IssueRow -IssueType 'multiple_source_matches' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId ($matchIds -join '|') -Message 'この脚注が台帳内の複数文献に一致しました。人による文献同定が必要です。'))
         foreach ($ambiguousSource in $matchedSources) {
             $ambiguousSourceId = [string]$ambiguousSource.source_id
             $ambiguousAdjacentSameSource = $false
@@ -1205,10 +1205,10 @@ foreach ($referenceNode in $documentXml.SelectNodes('//w:footnoteReference', $do
 
         foreach ($missingField in $citationEval.missing_fields) {
             if ($citationEval.missing_metadata_fields -contains $missingField) {
-                $issueRows.Add((New-IssueRow -IssueType 'bibliography_metadata_missing' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "Required bibliography metadata field is blank: $missingField" -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "required_field=$missingField"))
+                $issueRows.Add((New-IssueRow -IssueType 'bibliography_metadata_missing' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "必須の書誌項目が台帳で空欄です：$missingField" -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "required_field=$missingField"))
             }
             else {
-                $issueRows.Add((New-IssueRow -IssueType 'citation_required_component_missing' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "Required component not present in citation text: $missingField" -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "required_field=$missingField; text=$normalizedText"))
+                $issueRows.Add((New-IssueRow -IssueType 'citation_required_component_missing' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "脚注本文に必須項目が見つかりません：$missingField" -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "required_field=$missingField; text=$normalizedText"))
             }
         }
 
@@ -1217,7 +1217,7 @@ foreach ($referenceNode in $documentXml.SelectNodes('//w:footnoteReference', $do
         if (-not [string]::IsNullOrWhiteSpace($terminalExpected) -and
             -not [string]::IsNullOrWhiteSpace($terminalMark) -and
             -not [string]::Equals($terminalMark, $terminalExpected, [System.StringComparison]::Ordinal)) {
-            $issueRows.Add((New-IssueRow -IssueType 'terminal_mark_mismatch' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "Terminal mark '$terminalMark' does not match policy terminal mark '$terminalExpected'." -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "terminal_mark=$terminalMark; policy_mark=$terminalExpected"))
+            $issueRows.Add((New-IssueRow -IssueType 'terminal_mark_mismatch' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message "脚注末尾の記号「$terminalMark」が方針上の記号「$terminalExpected」と一致しません。" -RelatedFootnoteNumber '' -RelatedSourceId $sourceId -Evidence "terminal_mark=$terminalMark; policy_mark=$terminalExpected"))
         }
 
         $citationClass = if ($sourceIsFirstUse) { 'first' } else { 'repeat' }
@@ -1253,10 +1253,10 @@ foreach ($referenceNode in $documentXml.SelectNodes('//w:footnoteReference', $do
             terminal_mark = $terminalMark
         })
         if ($shortFormOnFirstUse) {
-            $issueRows.Add((New-IssueRow -IssueType 'short_form_on_first_use' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message 'Citation appears to use short-form wording on first source use and requires review.'))
+            $issueRows.Add((New-IssueRow -IssueType 'short_form_on_first_use' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message '文献の初出で短縮形が使われている可能性があります。初出に必要な情報を確認してください。'))
         }
         elseif ($hasShortFormMarker) {
-            $issueRows.Add((New-IssueRow -IssueType 'contextual_shorthand_candidate' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message 'A context-dependent shorthand appears with an explicit alias match; identity still requires review.' -RelatedSourceId $sourceId -Evidence 'identity_status=explicit_alias_match_review_candidate'))
+            $issueRows.Add((New-IssueRow -IssueType 'contextual_shorthand_candidate' -Severity 'review' -FootnoteNumber $footnoteNumber -ReferenceId $referenceId -SourceId $sourceId -Message '文献別名には一致しましたが、文脈依存の短縮形が含まれています。文献同一性は人が確認してください。' -RelatedSourceId $sourceId -Evidence 'identity_status=explicit_alias_match_review_candidate'))
         }
 
         $key = "$sourceId|$citationClass"
@@ -1341,14 +1341,14 @@ foreach ($key in $referenceCandidateBySourceClass.Keys) {
         }
         if (($citation.normalized_variant -ne $referenceCitation.normalized_variant) -or
             ($citation.punctuation_signature -ne $referenceCitation.punctuation_signature)) {
-            $issueRows.Add((New-IssueRow -IssueType 'citation_variant' -Severity 'review' -FootnoteNumber $citation.footnote_number -ReferenceId $citation.reference_id -SourceId $citation.source_id -Message 'Citation variant differs from reference for source/classification.' -RelatedFootnoteNumber $referenceCitation.footnote_number -RelatedSourceId $referenceCitation.source_id -Evidence "normalized_variant=$($citation.normalized_variant); punctuation_signature=$($citation.punctuation_signature)"))
+            $issueRows.Add((New-IssueRow -IssueType 'citation_variant' -Severity 'review' -FootnoteNumber $citation.footnote_number -ReferenceId $citation.reference_id -SourceId $citation.source_id -Message '同じ文献・同じ引用区分の基準表記と異なる表記が見つかりました。' -RelatedFootnoteNumber $referenceCitation.footnote_number -RelatedSourceId $referenceCitation.source_id -Evidence "normalized_variant=$($citation.normalized_variant); punctuation_signature=$($citation.punctuation_signature)"))
         }
     }
 }
 
 foreach ($source in $sources) {
     if (-not $citedSources.Contains($source.source_id)) {
-        $issueRows.Add((New-IssueRow -IssueType 'unused_bibliography_entry' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $source.source_id -Message 'This bibliography entry was not matched to a footnote. Review only; this is not a deletion instruction.'))
+        $issueRows.Add((New-IssueRow -IssueType 'unused_bibliography_entry' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $source.source_id -Message 'この台帳文献は脚注に一致しませんでした。確認対象であり、削除指示ではありません。'))
     }
 }
 
@@ -1356,7 +1356,7 @@ if ($bibliographyReconciliationStatus -eq 'evaluated') {
     foreach ($source in $sources) {
         if (($citedSources.Contains($source.source_id)) -and
             -not $observedBibliographySourceIds.Contains($source.source_id)) {
-            $issueRows.Add((New-IssueRow -IssueType 'registry_missing_from_document_bibliography' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $source.source_id -Message 'A cited source was not found in the designated bibliography section.' -Evidence "source_id=$($source.source_id)"))
+            $issueRows.Add((New-IssueRow -IssueType 'registry_missing_from_document_bibliography' -Severity 'review' -FootnoteNumber '' -ReferenceId '' -SourceId $source.source_id -Message '脚注で使われた文献が、指定した参考文献一覧の範囲内に見つかりませんでした。' -Evidence "source_id=$($source.source_id)"))
         }
     }
 }
@@ -1425,7 +1425,7 @@ Write-CsvFile -Path $issuesPath -Columns @(
 
 $inputHashAfter = (Get-FileHash -LiteralPath $resolvedInput -Algorithm SHA256).Hash.ToLowerInvariant()
 if (-not [string]::Equals($inputHashBefore, $inputHashAfter, [System.StringComparison]::Ordinal)) {
-    throw "Input DOCX changed during audit. Before: $inputHashBefore; after: $inputHashAfter"
+    throw "監査中に入力DOCXが変更されました。実行前：$inputHashBefore、実行後：$inputHashAfter"
 }
 
 $bibliographyDocumentHashAfter = if ($bibliographyReconciliationEnabled -and $null -ne $resolvedBibliographyDocument) {
@@ -1434,7 +1434,7 @@ $bibliographyDocumentHashAfter = if ($bibliographyReconciliationEnabled -and $nu
     ''
 }
 if ($bibliographyReconciliationEnabled -and -not [string]::Equals($bibliographyDocumentHashBefore, $bibliographyDocumentHashAfter, [System.StringComparison]::Ordinal)) {
-    throw "Bibliography DOCX changed during audit. Before: $bibliographyDocumentHashBefore; after: $bibliographyDocumentHashAfter"
+    throw "監査中に参考文献DOCXが変更されました。実行前：$bibliographyDocumentHashBefore、実行後：$bibliographyDocumentHashAfter"
 }
 
 $summary = [pscustomobject][ordered]@{
@@ -1475,51 +1475,51 @@ $summary = [pscustomobject][ordered]@{
         citation_variants = $citationVariantRows.Count
     }
     limitations = @(
-        'Version 2 adds citation variant tracking and source-type policy component checks.',
-        'Alias matches identify review candidates and do not establish bibliographic correctness.',
-        'Aliases are Unicode-normalized and use letter/number/mark boundaries to reduce substring false positives.',
-        'footnote_number is document-reference order and may differ from numbering rendered by Word.',
-        'CSV cells that could be evaluated as spreadsheet formulas are prefixed with an apostrophe.',
-        'No formatted replacement citations are generated.'
+        'バージョン2では、引用表記の揺れと文献種別ごとの必須項目を確認します。',
+        '文献別名との一致は確認候補を示すものであり、書誌情報の正しさを証明しません。',
+        '文献別名はUnicode正規化を行い、部分一致による誤検出を減らすため文字・数字・記号の境界を考慮します。',
+        'footnote_numberは本文中の参照順です。Wordに表示される脚注番号と異なる場合があります。',
+        '表計算ソフトで数式として評価される可能性があるCSVセルには、先頭にアポストロフィを付けます。',
+        '整形済みの置換用脚注は生成しません。'
     )
 }
 Set-Content -LiteralPath $summaryPath -Value ($summary | ConvertTo-Json -Depth 20) -Encoding utf8
 
 $reportLines = @(
-    '# Footnote audit report',
+    '# 脚注監査レポート',
     '',
-    '> Audit-only output: the input DOCX was not rewritten. Alias matches are review candidates, not claims of bibliographic correctness.',
+    '> 監査専用の出力です。入力DOCXは書き換えていません。文献別名との一致は確認候補であり、書誌情報の正しさを証明しません。',
     '',
-    '## Summary',
+    '## 集計',
     '',
-    "- Footnotes audited: $($footnoteRows.Count)",
-    "- Matched citation rows: $($citationRows.Count)",
-    "- Review issues: $($issueRows.Count)",
-    "- Input SHA-256 before: ``$inputHashBefore``",
-    "- Input SHA-256 after: ``$inputHashAfter``",
+    "- 監査した脚注：$($footnoteRows.Count)",
+    "- 文献候補に一致した引用行：$($citationRows.Count)",
+    "- 要確認事項：$($issueRows.Count)",
+    "- 入力SHA-256（実行前）：``$inputHashBefore``",
+    "- 入力SHA-256（実行後）：``$inputHashAfter``",
     '',
-    '## Review boundaries',
+    '## 確認上の制約',
     '',
-    '- `first` is the initial match in the doc for a source; `repeat` is any later single match.',
-    '- Unmatched and multiple-match footnotes require human review.',
-    '- `footnote_number` is document-reference order, not a reconstruction of numbering rendered by Word.',
-    '- Unused bibliography entries require review and are not deletion instructions.',
-    '- Document bibliography matching is review-only; it validates only marker-scoped presence and alias coverage, not truth of the cited material.',
-    '- A bibliography `marker_not_found` status means no matching marker was detected under the configured policy, not an absence proof of a bibliography in the source document.',
-    '- Version 2 adds citation variant normalization and explicit component/terminal-mark checks.',
-    '- Version 2 does not rewrite the DOCX or generate formatted replacement citations.'
+    '- `first`は、その文献が文書内で最初に一致した引用です。`repeat`は、それ以降に単独一致した引用です。',
+    '- 一致しない脚注と複数文献に一致する脚注は、人による確認が必要です。',
+    '- `footnote_number`は本文中の参照順であり、Wordに表示される脚注番号を再現したものではありません。',
+    '- 脚注に一致しない台帳文献は確認対象ですが、削除指示ではありません。',
+    '- DOCX内の参考文献一覧との照合は確認支援に限られます。マーカーで指定した範囲に文献別名があるかを調べるもので、引用内容の正しさを証明しません。',
+    '- 参考文献一覧の状態が`marker_not_found`の場合、設定した方針に一致するマーカーを検出できなかったという意味です。元文書に参考文献一覧が存在しないことを証明するものではありません。',
+    '- バージョン2では、引用表記の正規化、必須項目、末尾記号を明示的に確認します。',
+    '- バージョン2はDOCXを書き換えず、整形済みの置換用脚注も生成しません。'
 )
 Set-Content -LiteralPath $reportPath -Value $reportLines -Encoding utf8
 
 $finalInputHash = (Get-FileHash -LiteralPath $resolvedInput -Algorithm SHA256).Hash.ToLowerInvariant()
 if (-not [string]::Equals($inputHashBefore, $finalInputHash, [System.StringComparison]::Ordinal)) {
-    throw "Input DOCX changed during audit. Before: $inputHashBefore; final: $finalInputHash"
+    throw "監査中に入力DOCXが変更されました。実行前：$inputHashBefore、最終確認時：$finalInputHash"
 }
 
 if ($bibliographyReconciliationEnabled -and $null -ne $resolvedBibliographyDocument) {
     $finalBibliographyHash = (Get-FileHash -LiteralPath $resolvedBibliographyDocument -Algorithm SHA256).Hash.ToLowerInvariant()
     if (-not [string]::Equals($bibliographyDocumentHashBefore, $finalBibliographyHash, [System.StringComparison]::Ordinal)) {
-        throw "Bibliography DOCX changed during audit. Before: $bibliographyDocumentHashBefore; final: $finalBibliographyHash"
+        throw "監査中に参考文献DOCXが変更されました。実行前：$bibliographyDocumentHashBefore、最終確認時：$finalBibliographyHash"
     }
 }
 

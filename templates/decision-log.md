@@ -1,9 +1,9 @@
-# Citation policy decision log
+# 引用方針の決定記録
 
-Record only decisions that have been approved for the thesis.
+論文について承認済みの決定だけを記録してください。
 
-| Date | Rule | Decision | Authority | Affected source types | Notes |
+| 日付 | 規則 | 決定内容 | 承認者・根拠 | 対象文献種別 | 備考 |
 |---|---|---|---|---|---|
-| YYYY-MM-DD | Subsequent citation |  |  |  |  |
-| YYYY-MM-DD | Consecutive same source |  |  |  |  |
-| YYYY-MM-DD | Translated books |  |  |  |  |
+| YYYY-MM-DD | 再出の引用 |  |  |  |  |
+| YYYY-MM-DD | 直前と同じ文献 |  |  |  |  |
+| YYYY-MM-DD | 翻訳書 |  |  |  |  |

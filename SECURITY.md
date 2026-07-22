@@ -1,12 +1,12 @@
-# Security and manuscript privacy
+# セキュリティと未公表原稿の保護
 
-This repository is designed for unpublished manuscripts.
+このリポジトリは、未公表の論文原稿を扱うことを前提に設計しています。
 
-- Run the audit against a copy of the manuscript.
-- Keep manuscripts under `input/`, generated runs under `work/` or `output/`, and do not commit those directories.
-- The PowerShell audit does not upload data or call a network service.
-- The audit never edits the input DOCX.
-- AI review is optional. Before sending footnote text to an AI service, confirm the author's confidentiality and data-processing requirements.
-- Report vulnerabilities privately through [GitHub Private Vulnerability Reporting](https://github.com/Nagi-Inaba/thesis-footnote-normalizer/security/advisories/new). Do not attach a real manuscript or real bibliographic data.
+- 監査は論文原稿のコピーに対して実行してください。
+- 原稿は`input/`、生成した監査結果は`work/`または`output/`に置き、これらのディレクトリをGitへコミットしないでください。
+- PowerShellの監査スクリプトは、データをアップロードせず、ネットワークサービスも呼び出しません。
+- 監査スクリプトは入力DOCXを編集しません。
+- AIによる確認は任意です。脚注本文をAIサービスへ送る前に、著者の守秘義務とデータ処理条件を確認してください。
+- 脆弱性は[GitHub Private Vulnerability Reporting](https://github.com/Nagi-Inaba/thesis-footnote-normalizer/security/advisories/new)から非公開で報告してください。実際の論文原稿や書誌データは添付しないでください。
 
-The tool detects formatting and consistency candidates. It does not establish that a quotation, page number, author, title, or legal citation is substantively correct.
+このツールは、書式と一貫性に関する確認候補を検出します。引用文、頁数、著者名、書名、法令・判例等の引用内容が正しいことを証明するものではありません。

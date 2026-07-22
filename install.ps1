@@ -1,4 +1,4 @@
-[CmdletBinding(SupportsShouldProcess)]
+﻿[CmdletBinding(SupportsShouldProcess)]
 param(
     [ValidateSet('codex', 'claude', 'both')]
     [string]$Runtime = 'both',
@@ -27,7 +27,7 @@ function Assert-NoReparsePointInPath {
         if (Test-Path -LiteralPath $current) {
             $item = Get-Item -LiteralPath $current -Force
             if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-                throw "$Label traverses a reparse point: $current"
+                throw "$Label のパスに再解析ポイントが含まれています：$current"
             }
         }
         $parent = [System.IO.Path]::GetDirectoryName($current)
@@ -54,7 +54,7 @@ function Assert-NoReparsePointInTree {
     }
     foreach ($item in $items) {
         if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-            throw "$Label contains a reparse point: $($item.FullName)"
+            throw "$Label に再解析ポイントが含まれています：$($item.FullName)"
         }
     }
 }
@@ -66,10 +66,10 @@ function Resolve-AdapterHome {
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
-        throw "$Label is blank."
+        throw "$Label が空です。"
     }
     if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
-        throw 'USERPROFILE is unavailable; use a normal user environment before installation.'
+        throw 'USERPROFILEを取得できません。通常のユーザー環境でインストールしてください。'
     }
 
     $fullPath = [System.IO.Path]::GetFullPath($Path)
@@ -78,7 +78,7 @@ function Resolve-AdapterHome {
     $insideProfile = [string]::Equals($fullPath, $userProfile, [System.StringComparison]::OrdinalIgnoreCase) -or
         $fullPath.StartsWith($userPrefix, [System.StringComparison]::OrdinalIgnoreCase)
     if (-not $insideProfile -and -not $AllowExternalHome) {
-        throw "$Label is outside USERPROFILE. Rerun with -AllowExternalHome only after reviewing the path: $fullPath"
+        throw "$Label がUSERPROFILEの外にあります。パスを確認し、必要な場合に限り-AllowExternalHomeを指定して再実行してください：$fullPath"
     }
 
     Assert-NoReparsePointInPath -Path $fullPath -Label $Label
@@ -150,13 +150,13 @@ if ($Runtime -in @('claude', 'both')) {
 # Validate the complete plan before creating or replacing anything.
 foreach ($entry in $plan) {
     if (-not (Test-Path -LiteralPath $entry.Source)) {
-        throw "Missing package source: $($entry.Source)"
+        throw "配布元のファイルまたはディレクトリがありません：$($entry.Source)"
     }
     Assert-NoReparsePointInPath -Path $entry.Destination -Label $entry.Label
     $entry.HadExisting = Test-Path -LiteralPath $entry.Destination
     if ($entry.HadExisting) {
         if (-not $Force) {
-            throw "$($entry.Label) already exists at $($entry.Destination). Review it and rerun with -Force only if complete replacement is intended."
+            throw "$($entry.Label)はすでに存在します：$($entry.Destination)。内容を確認し、完全に置き換える場合に限り-Forceを指定して再実行してください。"
         }
         Assert-NoReparsePointInTree -Path $entry.Destination -Label $entry.Label
     }
@@ -164,9 +164,9 @@ foreach ($entry in $plan) {
 
 if ($WhatIfPreference) {
     foreach ($entry in $plan) {
-        $null = $PSCmdlet.ShouldProcess($entry.Destination, "Install $($entry.Label) by exact replacement")
+        $null = $PSCmdlet.ShouldProcess($entry.Destination, "$($entry.Label)を完全置換でインストール")
     }
-    Write-Output "Dry run completed; no adapters were installed. Planned selection: $Runtime"
+    Write-Output "ドライランが完了しました。アダプターはインストールしていません。選択：$Runtime"
     exit 0
 }
 
@@ -227,5 +227,5 @@ foreach ($entry in $plan) {
     }
 }
 
-Write-Output "Installed adapter selection: $Runtime"
-Write-Output 'Keep the cloned repository available because the adapters invoke its PowerShell audit script.'
+Write-Output "アダプターをインストールしました。選択：$Runtime"
+Write-Output 'アダプターはこのリポジトリのPowerShell監査スクリプトを呼び出すため、取得したリポジトリを移動・削除せず保管してください。'

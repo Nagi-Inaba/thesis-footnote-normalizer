@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
@@ -188,7 +188,12 @@ try {
     Assert-Equal -Expected 'false' -Actual ([string](@($citations | Where-Object footnote_number -eq '4')[0].adjacent_same_source)) -Message 'Source C first use is not adjacent to same source'
     Assert-Equal -Expected 0 -Actual @($issues | Where-Object issue_type -eq 'citation_variant' | Where-Object footnote_number -eq '7').Count -Message 'page-only differences do not create citation variant flags'
     Assert-Equal -Expected 1 -Actual @($issues | Where-Object issue_type -eq 'citation_variant' | Where-Object footnote_number -eq '8').Count -Message 'explicit shorthand variant is compared with the repeat reference'
-    Assert-True -Condition ($report.Contains('not claims of bibliographic correctness')) -Message 'report states bibliographic limitation'
+    Assert-True -Condition ($report.Contains('# 脚注監査レポート')) -Message 'report title is Japanese'
+    Assert-True -Condition ($report.Contains('## 集計')) -Message 'report summary heading is Japanese'
+    Assert-True -Condition ($report.Contains('書誌情報の正しさを証明しません')) -Message 'report states bibliographic limitation in Japanese'
+    Assert-True -Condition (-not $report.Contains('# Footnote audit report')) -Message 'legacy English report title is not emitted'
+    Assert-Equal -Expected 0 -Actual @($issues | Where-Object { $_.message -notmatch '[ぁ-んァ-ヶ一-龠]' }).Count -Message 'all human-readable issue messages contain Japanese'
+    Assert-Equal -Expected 0 -Actual @($summary.limitations | Where-Object { $_ -notmatch '[ぁ-んァ-ヶ一-龠]' }).Count -Message 'all human-readable limitations contain Japanese'
     Assert-True -Condition ([bool]$summary.input_unchanged) -Message 'summary records unchanged input'
     Assert-Equal -Expected 8 -Actual $summary.counts.footnotes -Message 'summary parses and records footnote count'
     Assert-Equal -Expected 2 -Actual $summary.schema_version -Message 'schema version is updated'
@@ -201,7 +206,7 @@ try {
         & $auditScript -InputDocx $fixturePath -BibliographyCsv $bibliographyPath -PolicyJson $policyPath -OutputDirectory $outputOne | Out-Null
     }
     catch {
-        $existingDirectoryRejected = $_.Exception.Message -like '*already exists*'
+        $existingDirectoryRejected = $_.Exception.Message -like '*すでに存在*'
     }
     Assert-True -Condition $existingDirectoryRejected -Message 'existing output directory is rejected without Force'
 
@@ -210,7 +215,7 @@ try {
         & $auditScript -InputDocx $fixturePath -BibliographyCsv $bibliographyPath -PolicyJson (Join-Path $outputOne 'summary.json') -OutputDirectory $outputOne -Force | Out-Null
     }
     catch {
-        $inputCollisionRejected = $_.Exception.Message -like '*overwrite an input file*'
+        $inputCollisionRejected = $_.Exception.Message -like '*入力ファイルを上書き*'
     }
     Assert-True -Condition $inputCollisionRejected -Message 'Force cannot overwrite a policy or bibliography input with an audit output'
 
@@ -232,7 +237,7 @@ try {
         & $auditScript -InputDocx $fixturePath -BibliographyCsv $bibliographyPath -PolicyJson $policyPath -OutputDirectory $junctionOutput -Force | Out-Null
     }
     catch {
-        $junctionRejected = $_.Exception.Message -like '*reparse point*'
+        $junctionRejected = $_.Exception.Message -like '*再解析ポイント*'
     }
     Assert-True -Condition $junctionRejected -Message 'reparse-point OutputDirectory is rejected'
     Remove-Item -LiteralPath $junctionOutput -Force
@@ -495,7 +500,7 @@ try {
             & $auditScript -InputDocx $duplicateCase.Path -BibliographyCsv $bibliographyPath -PolicyJson $policyPath -OutputDirectory (Join-Path $testRoot ("reject-{0}" -f ($duplicateCase.Label -replace ' ', '-'))) | Out-Null
         }
         catch {
-            $duplicateRejected = $_.Exception.Message -like '*duplicate required part*'
+            $duplicateRejected = $_.Exception.Message -like '*必須パーツが重複*'
         }
         Assert-True -Condition $duplicateRejected -Message "$($duplicateCase.Label) is rejected"
     }
@@ -505,7 +510,7 @@ try {
         & $auditScript -InputDocx $fixturePath -BibliographyCsv $bibliographyPath -PolicyJson $policyWithBibliographyPath -BibliographyDocx $duplicateBibliographyPath -OutputDirectory (Join-Path $testRoot 'reject-duplicate-bibliography') | Out-Null
     }
     catch {
-        $duplicateBibliographyRejected = $_.Exception.Message -like '*duplicate required part*'
+        $duplicateBibliographyRejected = $_.Exception.Message -like '*必須パーツが重複*'
     }
     Assert-True -Condition $duplicateBibliographyRejected -Message 'duplicate required part in bibliography DOCX is rejected'
 
@@ -514,7 +519,7 @@ try {
         & $auditScript -InputDocx $excessiveEntriesPath -BibliographyCsv $bibliographyPath -PolicyJson $policyPath -OutputDirectory (Join-Path $testRoot 'reject-excessive-entries') | Out-Null
     }
     catch {
-        $excessiveEntriesRejected = $_.Exception.Message -like '*entry count*'
+        $excessiveEntriesRejected = $_.Exception.Message -like '*ZIPエントリ数*'
     }
     Assert-True -Condition $excessiveEntriesRejected -Message 'DOCX with excessive ZIP entry count is rejected before archive expansion'
 
@@ -523,7 +528,7 @@ try {
         & $auditScript -InputDocx (Join-Path $testRoot 'not-a-docx.txt') -BibliographyCsv $bibliographyPath -PolicyJson $policyPath -OutputDirectory (Join-Path $testRoot 'invalid-extension-output') | Out-Null
     }
     catch {
-        $nonDocxRejected = $_.Exception.Message -like '*.docx extension*'
+        $nonDocxRejected = $_.Exception.Message -like '*.docx拡張子*'
     }
     Assert-True -Condition $nonDocxRejected -Message 'non-DOCX input is rejected'
 

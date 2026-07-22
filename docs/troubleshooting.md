@@ -1,57 +1,49 @@
-# Troubleshooting
+# トラブルシューティング
 
-## `word/footnotes.xml` is missing
+## `word/footnotes.xml`が見つからない
 
-The document may use endnotes, manually typed notes, or no true Word footnotes.
-The audit processes true Word footnotes only.
+文末脚注を使っている、脚注を手入力している、またはWordの脚注が存在しない可能性があります。この監査ツールが処理するのは、Wordの脚注機能で作成された脚注だけです。
 
-## A visible footnote is excluded
+## Wordで見える脚注が監査対象外になっている
 
-Inspect its OOXML `w:type`.
-Special footnotes such as separators are deliberately excluded from citation analysis; they are not evidence of a missing citation.
+OOXMLの`w:type`を確認してください。区切り線などの特殊脚注は、意図的に引用分析の対象外にしています。これは引用の欠落を示すものではありません。
 
-## A real citation is unmatched
+## 実在する引用が文献に一致しない
 
-Add a distinctive alias to the correct bibliography row.
-Avoid common words, short initials, and punctuation-only aliases.
+正しい参考文献の行に、ほかの文献と区別できる別名を追加してください。一般的な単語、短いイニシャル、記号だけの別名は避けます。
 
-## One footnote matches several sources
+## 1つの脚注が複数文献に一致する
 
-The note may validly cite several works, or an alias may be too broad.
-Review the note and registry manually.
+1つの脚注が実際に複数文献を引用している場合と、別名の範囲が広すぎる場合があります。脚注と台帳を人が確認してください。
 
-## A shorthand candidate looks wrong
+## 短縮形の候補が誤って見える
 
-`adjacent_same_source` reports sequence only.
-`ibid_rewrite_candidate` is a policy-aware review flag, not permission to rewrite.
-Existing `ibid.`, `op. cit.`, 「同上」, and 「前掲」 remain `review_required` and never prove source identity.
+`adjacent_same_source`は、脚注の並びだけを示します。`ibid_rewrite_candidate`は方針に基づく確認フラグであり、書き換えを許可するものではありません。既存の`ibid.`、`op. cit.`、「同上」、「前掲」は引き続き`review_required`として扱い、文献同一性を証明しません。
 
-## A first citation has a short-form warning
+## 初出に短縮形の警告が出る
 
-The first matched use appears to use a registered short form.
-Check the required first-use fields in the applicable `source_type_policies`; do not treat the match as proof that the full citation is complete.
+その文献が最初に一致した脚注で、台帳に登録した短縮形が使われている可能性があります。該当する`source_type_policies`の初出必須項目を確認してください。一致したというだけで、完全な引用情報がそろっているとは判断できません。
 
-## Bibliography reconciliation is empty or incomplete
+## 参考文献一覧との照合結果が空、または不完全になる
 
-Confirm that the policy's `bibliography_document` block is enabled and its markers match the selected document structure. When `-BibliographyDocx` is omitted, the audit searches the input DOCX itself.
-The audit extracts only marked bibliography content and does not guess where the bibliography begins or ends.
-`summary.json` records `marker_not_found` when an enabled marker is not found and `not_observed` when bibliography reconciliation is not enabled.
+方針の`bibliography_document`が有効で、指定したマーカーが対象文書の構造に一致していることを確認してください。`-BibliographyDocx`を省略すると、監査対象の論文DOCX自体を調べます。
 
-## A minimal policy passes but type checks are absent
+監査ツールは、マーカーで指定した範囲だけを抽出し、参考文献一覧の開始位置や終了位置を推測しません。`summary.json`では、有効な開始マーカーが見つからない場合を`marker_not_found`、参考文献照合を有効にしていない場合を`not_observed`と記録します。
 
-This is backward-compatible behavior.
-Add `source_type_policies` with required structured registry fields before relying on source-type completeness checks.
+## 最小方針では成功するが、文献種別ごとの確認が行われない
 
-## The body changed after the audit
+これは後方互換性のための動作です。文献種別ごとの充足確認を利用するには、構造化した台帳の必須項目を`source_type_policies`へ設定してください。
 
-Run the audit again because `first` and `repeat` depend on document order.
+## 監査後に本文を変更した
 
-## PowerShell reports an execution-policy error
+監査をやり直してください。`first`と`repeat`は、文書内の順序に依存します。
 
-If institutional policy permits it, use process scope only:
+## PowerShellで実行ポリシーのエラーが出る
+
+所属機関の規程で許可されている場合に限り、現在のPowerShellプロセスだけを対象に設定します。
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-Do not change machine-wide policy solely for this repository.
+このリポジトリを実行するためだけに、コンピューター全体の実行ポリシーを変更しないでください。

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
@@ -31,7 +31,7 @@ try {
         & $installer -Runtime both -CodexConfigDir $preflightCodex -ClaudeConfigDir $preflightClaude -AllowExternalHome | Out-Null
     }
     catch {
-        $collisionRejected = $_.Exception.Message -like '*already exists*'
+        $collisionRejected = $_.Exception.Message -like '*すでに存在*'
     }
     Assert-True -Condition $collisionRejected -Message 'later destination collision is rejected'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $preflightCodex 'skills\normalize-thesis-footnotes'))) -Message 'preflight failure leaves earlier destinations untouched'
@@ -58,7 +58,7 @@ try {
     # WhatIf must not create destinations and must describe a dry run.
     $whatIfCodex = Join-Path $testRoot 'whatif-codex'
     $whatIfText = (& $installer -Runtime codex -CodexConfigDir $whatIfCodex -AllowExternalHome -WhatIf 2>&1 | Out-String)
-    Assert-True -Condition ($whatIfText -like '*no adapters were installed*') -Message 'WhatIf states that no installation occurred'
+    Assert-True -Condition ($whatIfText -like '*アダプターはインストールしていません*') -Message 'WhatIf states that no installation occurred'
     Assert-True -Condition (-not (Test-Path -LiteralPath $whatIfCodex)) -Message 'WhatIf creates no configuration directory'
 
     Write-Output 'PASS: installer preflight, CLAUDE_CONFIG_DIR, exact Force replacement, and WhatIf behavior.'
