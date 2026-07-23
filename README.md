@@ -10,6 +10,9 @@
 
 バージョン0.2は監査専用です。入力DOCXと任意の参考文献DOCXを変更しません。
 
+本文の移動・追加・削除で文献の初出位置が変わるため、原則として本文構成を確定してから監査します。
+執筆途中に実行した結果は暫定扱いとし、本文確定後に再監査してください。
+
 - `.docx`に保存された真のWord脚注を読み取ります。
 - 入力DOCXを変更しません。
 - 登録済みの文献別名と脚注本文を照合します。
@@ -40,22 +43,21 @@
 ## 必要な環境
 
 - Windows 10または11
-- PowerShell 7以上を推奨
+- PowerShell 7以上を推奨（Windows PowerShell 5.1でもテスト済み）
 - 入力ファイルは`.docx`
 
 Microsoft Wordは、監査後に変更履歴付きで修正する段階だけで使用します。
 
-## 5分で試す
+## 最短手順
 
 ### 1. リポジトリを取得する
 
 ```powershell
-$repoUrl = Read-Host 'GitHubの「Code」からコピーしたHTTPS URL'
-git clone $repoUrl
+git clone https://github.com/Nagi-Inaba/thesis-footnote-normalizer.git
 Set-Location .\thesis-footnote-normalizer
 ```
 
-URLは、このリポジトリを公開したGitHub画面の「Code」から取得します。
+フォークしたリポジトリを使う場合は、clone URLをそのリポジトリのURLへ置き換えてください。
 
 ### 2. 論文のコピーを用意する
 
@@ -67,31 +69,6 @@ Copy-Item -LiteralPath $manuscript -Destination .\input\thesis-footnote-review-0
 
 元の論文を直接指定せず、必ず別名コピーを使用します。
 
-### AIアダプターを使う場合
-
-CodexとClaude Codeのスキル・エージェントは任意です。
-
-アダプターは、このclone内の監査スクリプトを呼び出します。インストール後もリポジトリを移動・削除せず、監査時はリポジトリのルートから実行してください。
-
-内容を確認してから、対象ランタイムだけをインストールします。
-
-```powershell
-.\install.ps1 -Runtime codex -WhatIf
-.\install.ps1 -Runtime codex
-```
-
-`-Runtime`には`codex`、`claude`、`both`を指定できます。
-
-既存の同名スキルまたはエージェントがある場合、既定では停止します。
-
-`-Force`は既存内容を確認した場合だけ使用してください。既存アダプターへマージせず、同名のスキル・エージェントを完全に置き換えるため、旧版だけに存在するファイルは残りません。
-
-インストール先は既定で`USERPROFILE`配下に限定され、途中にジャンクションやシンボリックリンクがある場合は停止します。
-
-Codexは`CODEX_HOME`、Claude Codeは公式の`CLAUDE_CONFIG_DIR`が設定されていれば、そのディレクトリを使用します。明示的に指定する場合は`-CodexConfigDir`または`-ClaudeConfigDir`を使用できます。
-
-意図的に別ドライブへ配置するときだけ`-AllowExternalHome`を追加してください。
-
 ### 3. 設定ファイルをコピーする
 
 ```powershell
@@ -100,6 +77,10 @@ Copy-Item .\config\bibliography.example.csv .\input\bibliography.csv
 ```
 
 `citation-policy.json`と`bibliography.csv`を論文用に編集します。
+
+サンプルの人物名、書名、出版社はすべて架空です。
+実行前にサンプル行を削除し、論文で実際に使用している文献と、研究科・指導教員の方針に基づく規則へ置き換えてください。
+不足する書誌情報や新しい文献を推測して追加しません。
 
 ### 4. 監査を実行する
 
@@ -128,15 +109,17 @@ Copy-Item .\config\bibliography.example.csv .\input\bibliography.csv
 
 監査対象の主要XML部品には64 MiBの上限、圧縮率上限、DTD禁止を適用します。
 
-### 5. 要確認項目から読む
+### 5. 全体と要確認項目を読む
 
 次の順で確認します。
 
-1. `issues.csv`
-2. `report.md`
+1. `report.md`
+2. `issues.csv`
 3. `citations.csv`
 4. `footnotes.csv`
 5. `summary.json`
+
+最初に`report.md`で件数と監査上の制約を把握し、その後に`issues.csv`の各項目を確認します。
 
 ## 設定ファイル
 
@@ -280,6 +263,36 @@ Excel等で数式として評価され得る文字列は、CSV上で先頭にア
 
 AIは必須ではありません。
 
+### アダプターを導入する
+
+CodexとClaude Codeのスキル・エージェントは任意です。
+
+アダプターは、このclone内の監査スクリプトを呼び出します。
+インストール後もリポジトリを移動・削除せず、監査時はリポジトリのルートから実行してください。
+
+内容を確認してから、対象ランタイムだけをインストールします。
+
+```powershell
+.\install.ps1 -Runtime codex -WhatIf
+.\install.ps1 -Runtime codex
+```
+
+`-Runtime`には`codex`、`claude`、`both`を指定できます。
+
+既存の同名スキルまたはエージェントがある場合、既定では停止します。
+
+`-Force`は既存内容を確認した場合だけ使用してください。
+既存アダプターへマージせず、同名のスキル・エージェントを完全に置き換えるため、旧版だけに存在するファイルは残りません。
+
+インストール先は既定で`USERPROFILE`配下に限定され、途中にジャンクションやシンボリックリンクがある場合は停止します。
+
+Codexは`CODEX_HOME`、Claude Codeは公式の`CLAUDE_CONFIG_DIR`が設定されていれば、そのディレクトリを使用します。
+明示的に指定する場合は`-CodexConfigDir`または`-ClaudeConfigDir`を使用できます。
+
+意図的に別ドライブへ配置するときだけ`-AllowExternalHome`を追加してください。
+
+### AIに渡す範囲
+
 AIへ渡す前に、著者の機密保持条件と利用サービスのデータ取扱条件を確認してください。
 
 Codex用スキルは`codex/skills/normalize-thesis-footnotes/`、Claude Code用スキルは`claude/skills/normalize-thesis-footnotes/`にあります。
@@ -304,13 +317,15 @@ thesis-footnote-normalizer/
 ├─ CLAUDE.md
 ├─ SECURITY.md
 ├─ LICENSE
+├─ install.ps1
 ├─ config/
 │  ├─ citation-policy.example.json
 │  └─ bibliography.example.csv
 ├─ docs/
 │  ├─ citation-policy-guide.md
 │  ├─ word-workflow.md
-│  └─ troubleshooting.md
+│  ├─ troubleshooting.md
+│  └─ release-checklist.md
 ├─ codex/
 │  ├─ skills/normalize-thesis-footnotes/
 │  └─ agents/footnote-normalization-reviewer.toml
@@ -341,7 +356,7 @@ thesis-footnote-normalizer/
 - 入力DOCXのSHA-256が変化しない
 - 再実行で意味的に同じ結果を得られる
 - アダプターの全宛先を変更前に検査し、`-Force`で旧ファイルを残さず置換できる
-- Claude Codeの`CLAUDE_CONFIG_DIR`へインストールできる
+- CodexとClaude Codeの一時設定先へ実インストールし、配布元と内容が一致する
 
 GitHub Actionsは`windows-2025`上のPowerShellで同じテストを実行します。
 
@@ -349,13 +364,9 @@ GitHub Actionsは`windows-2025`上のPowerShellで同じテストを実行しま
 
 [`docs/troubleshooting.md`](docs/troubleshooting.md)を参照してください。
 
-## 公開前チェック
+## 保守者向け
 
-- `git status`で`input/`、`work/`、`output/`が含まれていないことを確認する
-- 絶対ローカルパスが残っていないことを確認する
-- 実在論文、実在する引用、個人名、メールアドレス、APIキーがないことを確認する
-- `scripts/Test-Repository.ps1`が成功することを確認する
-- ライセンス方針を確認する
+リポジトリを更新・公開する手順は、[`docs/release-checklist.md`](docs/release-checklist.md)を参照してください。
 
 ## ライセンス
 

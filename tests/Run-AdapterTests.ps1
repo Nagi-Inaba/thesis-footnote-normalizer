@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 Set-StrictMode -Version Latest
@@ -52,10 +52,13 @@ $workflowText = Get-Content -LiteralPath (Join-Path $repoRoot '.github\workflows
 $readmeText = Get-Content -LiteralPath (Join-Path $repoRoot 'README.md') -Raw -Encoding utf8
 Assert-True -Condition ($workflowText -like '*runs-on: windows-2025*') -Message 'workflow uses the fixed Windows 2025 runner'
 Assert-True -Condition ($readmeText.Contains('windows-2025')) -Message 'README names the fixed Windows 2025 runner'
+Assert-True -Condition ($readmeText.Contains('脚注8件')) -Message 'README footnote fixture count matches the audit test'
 
-$trackedPaths = @(& git -C $repoRoot ls-files 2>$null)
-if ($LASTEXITCODE -eq 0 -and $trackedPaths.Count -gt 0) {
-    $publicFiles = @($trackedPaths | ForEach-Object { Get-Item -LiteralPath (Join-Path $repoRoot $_) })
+$publicPaths = @(& git -C $repoRoot ls-files --cached --others --exclude-standard 2>$null)
+if ($LASTEXITCODE -eq 0 -and $publicPaths.Count -gt 0) {
+    $publicFiles = @($publicPaths | Sort-Object -Unique | ForEach-Object {
+        Get-Item -LiteralPath (Join-Path $repoRoot $_)
+    })
 }
 else {
     $excludedPrefixes = @('.git', '.code-review-graph') | ForEach-Object {
