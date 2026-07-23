@@ -36,6 +36,20 @@ try {
     Assert-True -Condition $collisionRejected -Message 'later destination collision is rejected'
     Assert-True -Condition (-not (Test-Path -LiteralPath (Join-Path $preflightCodex 'skills\normalize-thesis-footnotes'))) -Message 'preflight failure leaves earlier destinations untouched'
 
+    # Codex installation must copy both adapter packages exactly.
+    $codexConfig = Join-Path $testRoot 'codex-success'
+    & $installer -Runtime codex -CodexConfigDir $codexConfig -AllowExternalHome | Out-Null
+    $codexSkill = Join-Path $codexConfig 'skills\normalize-thesis-footnotes\SKILL.md'
+    $codexAgent = Join-Path $codexConfig 'agents\footnote-normalization-reviewer.toml'
+    Assert-True -Condition (Test-Path -LiteralPath $codexSkill -PathType Leaf) -Message 'Codex config directory receives the skill'
+    Assert-True -Condition (Test-Path -LiteralPath $codexAgent -PathType Leaf) -Message 'Codex config directory receives the agent'
+    $expectedCodexSkill = Get-Content -LiteralPath (Join-Path $repoRoot 'codex\skills\normalize-thesis-footnotes\SKILL.md') -Raw -Encoding utf8
+    $installedCodexSkill = Get-Content -LiteralPath $codexSkill -Raw -Encoding utf8
+    $expectedCodexAgent = Get-Content -LiteralPath (Join-Path $repoRoot 'codex\agents\footnote-normalization-reviewer.toml') -Raw -Encoding utf8
+    $installedCodexAgent = Get-Content -LiteralPath $codexAgent -Raw -Encoding utf8
+    Assert-True -Condition ($installedCodexSkill -eq $expectedCodexSkill) -Message 'Codex skill is copied exactly'
+    Assert-True -Condition ($installedCodexAgent -eq $expectedCodexAgent) -Message 'Codex agent is copied exactly'
+
     # Claude Code must honor its official configuration directory variable.
     $claudeConfig = Join-Path $testRoot 'claude-config-env'
     $env:CLAUDE_CONFIG_DIR = $claudeConfig
@@ -61,7 +75,7 @@ try {
     Assert-True -Condition ($whatIfText -like '*アダプターはインストールしていません*') -Message 'WhatIf states that no installation occurred'
     Assert-True -Condition (-not (Test-Path -LiteralPath $whatIfCodex)) -Message 'WhatIf creates no configuration directory'
 
-    Write-Output 'PASS: installer preflight, CLAUDE_CONFIG_DIR, exact Force replacement, and WhatIf behavior.'
+    Write-Output 'PASS: installer preflight, Codex and Claude installs, exact Force replacement, and WhatIf behavior.'
 }
 finally {
     $env:CLAUDE_CONFIG_DIR = $previousClaudeConfig
